@@ -12,10 +12,10 @@ import numpy as np
 import RPi.GPIO as GPIO
 import datetime as dt
 import Adafruit_DHT
-import glob
+#import glob
 import bme280
-
-
+import requests
+import ms5837_p3
 #------------------------pin assignment------------------------------#
 button_pin1 = 12 #for push button
 button_pin2 = 16
@@ -49,7 +49,7 @@ class aquariumController():
 		self.waterTemp = 25
 		self.airTemp = 0
 		self.airRH = 0
-		#self.bmeData = [0,0,0,0] #store bme280 data as [temp,pressure,gauge pressure, rh]
+		self.bmeData = [0,0,0,0] #store bme280 data as [temp,pressure,gauge pressure, rh]
 
 		#for water level trigger
 		self.floatSw = 0
@@ -69,8 +69,9 @@ class aquariumController():
 		self.dht = Adafruit_DHT.DHT22
 
 		#ms5837 setup
-		# self.bar30 = ms5837_p3.MS5837_02BA()
-		# self.bar30.setFluidDensity(ms5837_p3.DENSITY_SALTWATER)
+		self.bar30 = ms5837_p3.MS5837_02BA()
+		self.bar30.setFluidDensity(ms5837_p3.DENSITY_SALTWATER)
+		self.bar30.init()
 		self.depth = 0
 
 		#for error keeping
@@ -152,12 +153,13 @@ class aquariumController():
 
 	def updateData(self):
 		'''Update environmental data from sensors.'''
-		self.airRH, self.airTemp = Adafruit_DHT.read_retry(self.dht, dht_pin)
+		#self.airRH, self.airTemp = Adafruit_DHT.read_retry(self.dht, dht_pin)
 		self.floatStat = self.checkFloatSwitch(float_pin1)
 		self.floatStat2 = self.checkFloatSwitch(float_pin2)
-		# self.bar30.read()
-		# self.waterTemp = self.bar30.temperature(ms5837_p3.UNITS_Centigrade)
-		# self.depth = self.bar30.depth()
+		self.bar30.read()
+		self.waterTemp = self.bar30.temperature(ms5837_p3.UNITS_Centigrade)
+		self.depth = self.bar30.depth()*100 #convert to cm
+		self.bmeData = bme280.readBME280All()
 		return True
 
 	def errCheck(self):
@@ -172,7 +174,7 @@ class aquariumController():
 		'''record data to the directory.
 		Data format: unix time, ds18b20, dht22 rh, dht22 temp, bme280 data (4)'''
 		file = open(directory+'data.csv','a') 
-		file.write('%.2f,%.2f,%.2f,%.2f,%.2f\n'%(time.time(),self.waterTemp,self.depth*100,self.airRH,self.airTemp))
+		file.write('%.2f,%.2f,%.2f,%.2f,%.2f\n'%(time.time(),self.waterTemp,self.depth,self.bmeData[0],self.bmeData[3]))
 		file.close()
 		return True
 
@@ -203,5 +205,17 @@ class aquariumController():
 		self.powerSwitch(1) #turn back on
 		time.sleep(wt)
 		return True
+
+	def uploadData(self,historic):
+		'''Upload data to oceanleaf website.
+		Boolean historic: if 1, then write to historical data as well'''
+		payload = {'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3]}
+		r = requests.get('http://www.oceanleaf.org/phpScript/writeHomeData.php',params=payload)
+
+		if historic:
+			payload = {'time':time.time,'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3]}
+			r = requests.get('http://www.oceanleaf.org/phpScript/writeHistoricData.php',params=payload)
+
+		return r.text=='OK' #check whether the php script responded.
 
 

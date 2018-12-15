@@ -8,8 +8,8 @@ import io
 import os
 from array import array
 from aquariumLib import *
-import Adafruit_DHT
-import ms5837_p3
+#import Adafruit_DHT
+#import ms5837_p3
 
 display_rows = 2
 display_columns = 4
@@ -34,9 +34,6 @@ data_postfix = [
 		[' deg',' deg',' deg',' deg']
 ]
 
-sensor = ms5837_p3.MS5837_02BA()
-sensor.init()
-sensor.setFluidDensity(ms5837_p3.DENSITY_SALTWATER)
 aqua = aquariumController()
 
 aqua.powerSwitch(1) #turn on peripherals
@@ -49,15 +46,16 @@ def get_data():
 	
 	#update all data
 	aqua.updateData()
+	aqua.uploadData(0) #upload real time data without historical data
 	# try:
 	# 	aqua.updateData()
 	# except Exception:
 	# 	#errorStat = 1
 	# 	pass
 	#ms5837 data update
-	sensor.read()
-	aqua.waterTemp = sensor.temperature(ms5837_p3.UNITS_Centigrade)
-	aqua.depth = sensor.depth()
+	# sensor.read()
+	# aqua.waterTemp = sensor.temperature(ms5837_p3.UNITS_Centigrade)
+	# aqua.depth = sensor.depth()
 
 	#aqua.getRFdata(1) #get data from RF #1
 
@@ -70,6 +68,7 @@ def get_data():
 	#record data to files
 	if(aqua.checkTime(300)): #record data every 5 minutes
 		aqua.recordData('/home/pi/aquariumController/')
+		aqua.uploadData(1) #upload historical data
 
 	# if errorStat:
 	# 	errorCnt = errorCnt +1
@@ -116,13 +115,13 @@ def get_data():
 	#data_boxes[0][3].text='{0:0.2f}'.format(adv.fileNum) 
 
 	# numeric data boxes
-	data_boxes[0][0].text='%.2f'  %(aqua.depth*100) + ' cm'
+	data_boxes[0][0].text='%.2f'  %(aqua.depth) + ' cm'
 	# data_boxes[0][1].text='%.2f'  %(aqua.bmeData[0]) + ' C'
 	# data_boxes[0][2].text='%.2f'  %(aqua.bmeData[3]) + ' %'
 
 	data_boxes[1][0].text='{0:0.2f}'.format(aqua.waterTemp) + ' C'
-	data_boxes[1][1].text='{0:0.2f}'.format(aqua.airTemp) + ' C'
-	data_boxes[1][2].text='{0:0.2f}'.format(aqua.airRH) + ' %'
+	data_boxes[1][1].text='{0:0.2f}'.format(aqua.bmeData[0]) + ' C'
+	data_boxes[1][2].text='{0:0.2f}'.format(aqua.bmeData[3]) + ' %'
 
 
 	# data_boxes[1][2].text='%d' %errorStat
