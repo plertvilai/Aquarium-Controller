@@ -19,8 +19,8 @@ data_size = 22
 laser_was_on = False 
 
 data_types = [
-		['BME Gauge','BME Temp','BME RH',''],
-		['DS18B20 Temp','DHT22 Temp','DHT22 RH',''],
+		['Water Depth','Pressure','BME RH',''],
+		['Water Temp','Air Temp','Air RH',''],
 		['Top Tank','Bot Tank','Err Cnt','']
 ]
 
@@ -46,6 +46,7 @@ def get_data():
 	
 	#update all data
 	aqua.updateData()
+	time.sleep(2)
 	aqua.uploadData(0) #upload real time data without historical data
 	# try:
 	# 	aqua.updateData()
@@ -77,15 +78,20 @@ def get_data():
 	# print('Water Temp: %d'%aqua.waterTemp)
 	# print('Float Sw: %d'%aqua.floatSw)
 
-	if aqua.floatStat == 2: #float initial trigger
-		aqua.pumpTime = time.time()
+	# if aqua.floatStat == 2: #float initial trigger
+	# 	aqua.pumpTime = time.time()
+	# 	aqua.pumpON()
+	# elif aqua.floatStat == 1: #kept triggered
+	# 	aqua.pumpSafety(10) #check safety stop
+	# 	aqua.pumpON()
+	# elif aqua.floatStat == 4: #trigger released
+	# 	aqua.pumpOFF()
+	# 	aqua.pumpSafe = 1 #reset pump safety
+	# else:
+	# 	aqua.pumpOFF()
+	aqua.buttonRead()
+	if aqua.buttonState:
 		aqua.pumpON()
-	elif aqua.floatStat == 1: #kept triggered
-		aqua.pumpSafety(10) #check safety stop
-		aqua.pumpON()
-	elif aqua.floatStat == 4: #trigger released
-		aqua.pumpOFF()
-		aqua.pumpSafe = 1 #reset pump safety
 	else:
 		aqua.pumpOFF()
 
@@ -116,7 +122,7 @@ def get_data():
 
 	# numeric data boxes
 	data_boxes[0][0].text='%.2f'  %(aqua.depth) + ' cm'
-	# data_boxes[0][1].text='%.2f'  %(aqua.bmeData[0]) + ' C'
+	data_boxes[0][1].text='%.2f'  %(aqua.bmeData[1]) + ' bar'
 	# data_boxes[0][2].text='%.2f'  %(aqua.bmeData[3]) + ' %'
 
 	data_boxes[1][0].text='{0:0.2f}'.format(aqua.waterTemp) + ' C'
