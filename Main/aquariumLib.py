@@ -17,7 +17,7 @@ import bme280
 import requests
 import ms5837_p3
 #------------------------pin assignment------------------------------#
-button_pin1 = 12 #for push button
+button_pin1 = 27 #for push button
 button_pin2 = 16
 pump_pin1 = 26
 pump_pin2 = 19
@@ -209,13 +209,23 @@ class aquariumController():
 	def uploadData(self,historic):
 		'''Upload data to oceanleaf website.
 		Boolean historic: if 1, then write to historical data as well'''
-		payload = {'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3]}
+		time.sleep(1)
+		payload = {'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3],'pressure':self.bmeData[1]}
 		r = requests.get('http://www.oceanleaf.org/phpScript/writeHomeData.php',params=payload)
 
 		if historic:
-			payload = {'time':time.time,'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3]}
+			payload = {'wtemp':self.waterTemp,'depth':self.depth,'atemp':self.bmeData[0],'humid':self.bmeData[3],'pressure':self.bmeData[1]}
 			r = requests.get('http://www.oceanleaf.org/phpScript/writeHistoricData.php',params=payload)
 
 		return r.text=='OK' #check whether the php script responded.
+
+	def buttonRead(self):
+		'''Read push button status.'''
+		if GPIO.input(button_pin1):
+			self.buttonState = not self.buttonState
+			return True
+		else:
+			return False
+
 
 
